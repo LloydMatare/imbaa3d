@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Auth.js Models ──────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  credits       Int       @default(5)
+
+  stripeCustomerId String? @unique
+
+  accounts           Account[]
+  sessions           Session[]
+  projects           Project[]
+  creditTransactions CreditTransaction[]
+  payments           Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Application Models ──────────────────────────────────────────
+
+model Project {
+  id          String  @id @default(cuid())
+  title       String
+  description String?
+  type        String  @default("FULL_CONVERSION")
+  status      String  @default("DRAFT")
+
+  floorPlanData Json?
+  sceneConfig   Json?
+
+  thumbnailUrl String?
+  modelUrl     String?
+
+  isPublic Boolean @default(false)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model CreditTransaction {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  amount       Int
+  reason       String
+  balanceAfter Int
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model Payment {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  stripeCheckoutSessionId String  @unique
+  stripePaymentIntentId   String? @unique
+
+  amount       Int
+  currency     String @default("usd")
+  creditsAdded Int
+  status       String @default("PENDING")
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}

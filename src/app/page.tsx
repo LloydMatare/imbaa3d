@@ -1,65 +1,125 @@
-import Image from "next/image";
+import Link from "next/link";
+import { Navbar } from "@/components/layout/navbar";
+import { HeroSceneWrapper } from "@/components/three/hero-scene-wrapper";
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="min-h-screen bg-gray-950">
+      <Navbar />
+
+      {/* Hero */}
+      <section className="relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight">
+                Turn Floor Plans into
+                <span className="text-blue-500"> Stunning 3D</span>
+              </h1>
+              <p className="mt-6 text-lg text-gray-400 max-w-xl">
+                Draw 2D floor plans, upload existing blueprints, and let AI
+                transform them into interactive 3D models. All in your browser.
+              </p>
+              <div className="mt-8 flex gap-4">
+                <Link
+                  href="/register"
+                  className="px-6 py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition"
+                >
+                  Start Free — 5 Credits
+                </Link>
+                <Link
+                  href="/pricing"
+                  className="px-6 py-3 rounded-lg border border-gray-700 text-gray-300 hover:bg-gray-800 transition"
+                >
+                  View Pricing
+                </Link>
+              </div>
+            </div>
+            <div className="h-[400px] lg:h-[500px]">
+              <HeroSceneWrapper />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="border-t border-gray-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+          <h2 className="text-2xl font-bold text-white text-center mb-12">
+            Everything you need to visualize spaces
+          </h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[
+              {
+                title: "2D Floor Plan Editor",
+                desc: "Draw walls, place furniture, add doors and windows with snap-to-grid precision.",
+                icon: "📐",
+              },
+              {
+                title: "AI 2D → 3D Conversion",
+                desc: "Upload a floor plan image and our AI generates a full 3D model automatically.",
+                icon: "🤖",
+              },
+              {
+                title: "Interactive 3D Viewer",
+                desc: "Explore your designs in an interactive 3D environment with orbit, zoom, and walkthrough.",
+                icon: "🏠",
+              },
+              {
+                title: "Virtual Staging",
+                desc: "Drag and drop furniture into your 3D scenes. Customize materials and colors.",
+                icon: "🪑",
+              },
+              {
+                title: "HD Exports & Sharing",
+                desc: "Export high-res renders, share public links, or embed viewers on your website.",
+                icon: "📤",
+              },
+              {
+                title: "Pay As You Go",
+                desc: "No subscriptions required. Buy credit packs and use them when you need.",
+                icon: "💳",
+              },
+            ].map((feature) => (
+              <div
+                key={feature.title}
+                className="p-6 rounded-xl border border-gray-800 bg-gray-900/50"
+              >
+                <div className="text-2xl mb-3">{feature.icon}</div>
+                <h3 className="text-sm font-semibold text-white mb-2">
+                  {feature.title}
+                </h3>
+                <p className="text-sm text-gray-500">{feature.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="border-t border-gray-800">
+        <div className="max-w-3xl mx-auto px-4 py-20 text-center">
+          <h2 className="text-3xl font-bold text-white mb-4">
+            Ready to bring your floor plans to life?
+          </h2>
+          <p className="text-gray-400 mb-8">
+            Sign up free and get 5 credits to try AI-powered 3D generation.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            href="/register"
+            className="inline-block px-8 py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            Get Started Free
+          </Link>
         </div>
-      </main>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-800 py-8">
+        <div className="max-w-7xl mx-auto px-4 text-center text-sm text-gray-600">
+          © {new Date().getFullYear()} Imbaa3D. All rights reserved.
+        </div>
+      </footer>
     </div>
   );
 }
