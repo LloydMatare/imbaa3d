@@ -30,7 +30,7 @@ export function PricingCard({ pkg }: { pkg: CreditPackage }) {
       } else {
         const data = await res.json();
         if (data.error === "Unauthorized") {
-          window.location.href = "/login";
+          window.location.href = "/sign-in";
         }
       }
     } finally {

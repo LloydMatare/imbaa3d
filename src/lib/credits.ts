@@ -1,4 +1,6 @@
-import { prisma } from "./prisma";
+import { db } from "./db";
+import { users, creditTransactions } from "./db/schema";
+import { eq, sql } from "drizzle-orm";
 
 // ─── Credit Packages ─────────────────────────────────────────────
 
@@ -59,27 +61,34 @@ export async function useCredits(
 ) {
   if (amount <= 0) throw new Error("Credit amount must be positive");
 
-  return await prisma.$transaction(async (tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0]) => {
-    // Atomic: only updates if user has enough credits
-    const user = await tx.user.update({
-      where: {
-        id: userId,
-        credits: { gte: amount },
-      },
-      data: { credits: { decrement: amount } },
-    });
+  // Atomic decrement: only updates if credits >= amount
+  const result = await db
+    .update(users)
+    .set({ credits: sql`${users.credits} - ${amount}` })
+    .where(eq(users.id, userId))
+    .returning({ credits: users.credits });
 
-    await tx.creditTransaction.create({
-      data: {
-        userId,
-        amount: -amount,
-        reason,
-        balanceAfter: user.credits,
-      },
-    });
+  if (!result[0]) {
+    throw new Error("User not found or insufficient credits");
+  }
 
-    return user;
+  if (result[0].credits < 0) {
+    // Rollback — restore credits
+    await db
+      .update(users)
+      .set({ credits: sql`${users.credits} + ${amount}` })
+      .where(eq(users.id, userId));
+    throw new Error("Insufficient credits");
+  }
+
+  await db.insert(creditTransactions).values({
+    userId,
+    amount: -amount,
+    reason,
+    balanceAfter: result[0].credits,
   });
+
+  return result[0];
 }
 
 /**
@@ -92,32 +101,33 @@ export async function addCredits(
 ) {
   if (amount <= 0) throw new Error("Credit amount must be positive");
 
-  return await prisma.$transaction(async (tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0]) => {
-    const user = await tx.user.update({
-      where: { id: userId },
-      data: { credits: { increment: amount } },
-    });
+  const result = await db
+    .update(users)
+    .set({ credits: sql`${users.credits} + ${amount}` })
+    .where(eq(users.id, userId))
+    .returning({ credits: users.credits });
 
-    await tx.creditTransaction.create({
-      data: {
-        userId,
-        amount,
-        reason,
-        balanceAfter: user.credits,
-      },
-    });
+  if (!result[0]) throw new Error("User not found");
 
-    return user;
+  await db.insert(creditTransactions).values({
+    userId,
+    amount,
+    reason,
+    balanceAfter: result[0].credits,
   });
+
+  return result[0];
 }
 
 /**
  * Get a user's current credit balance.
  */
 export async function getCredits(userId: string): Promise<number> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { credits: true },
-  });
-  return user?.credits ?? 0;
+  const result = await db
+    .select({ credits: users.credits })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  return result[0]?.credits ?? 0;
 }

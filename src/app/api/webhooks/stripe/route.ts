@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import { payments } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { addCredits } from "@/lib/credits";
+import { ensureDbUserById } from "@/lib/auth/ensure-db-user";
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
@@ -46,36 +49,42 @@ export async function POST(req: NextRequest) {
     }
 
     // Idempotency: check if we already processed this session
-    const existing = await prisma.payment.findUnique({
-      where: { stripeCheckoutSessionId: session.id },
-    });
+    const [existing] = await db
+      .select({ status: payments.status })
+      .from(payments)
+      .where(eq(payments.stripeCheckoutSessionId, session.id))
+      .limit(1);
 
     if (existing?.status === "COMPLETED") {
       return NextResponse.json({ received: true });
     }
 
     try {
-      await prisma.$transaction(async (tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0]) => {
-        // Upsert payment record
-        await tx.payment.upsert({
-          where: { stripeCheckoutSessionId: session.id },
-          create: {
-            userId,
-            stripeCheckoutSessionId: session.id,
-            stripePaymentIntentId: session.payment_intent as string | null,
-            amount: session.amount_total || 0,
-            currency: session.currency || "usd",
-            creditsAdded: creditsToAdd,
-            status: "COMPLETED",
-          },
-          update: {
+      // Upsert the payment record
+      await db
+        .insert(payments)
+        .values({
+          userId,
+          stripeCheckoutSessionId: session.id,
+          stripePaymentIntentId: session.payment_intent as string | null,
+          amount: session.amount_total || 0,
+          currency: session.currency || "usd",
+          creditsAdded: creditsToAdd,
+          status: "COMPLETED",
+        })
+        .onConflictDoUpdate({
+          target: payments.stripeCheckoutSessionId,
+          set: {
             status: "COMPLETED",
             stripePaymentIntentId: session.payment_intent as string | null,
           },
         });
-      });
 
-      // Add credits (separate transaction for clarity)
+      // In case the user hasn't hit the app yet (and thus doesn't have a DB row),
+      // make sure the FK target exists before we add credits.
+      await ensureDbUserById(userId);
+
+      // Add credits
       await addCredits(userId, creditsToAdd, "purchase");
 
       console.log(

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { auth } from "@clerk/nextjs/server";
 import { stripe } from "@/lib/stripe";
 import { CREDIT_PACKAGES } from "@/lib/credits";
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const { userId } = await auth();
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       },
     ],
     metadata: {
-      userId: session.user.id,
+      userId,
       creditsToAdd: String(pkg.credits),
       packageId: pkg.id,
     },

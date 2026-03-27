@@ -22,7 +22,7 @@ export default function Home() {
               </p>
               <div className="mt-8 flex gap-4">
                 <Link
-                  href="/register"
+                  href="/sign-up"
                   className="px-6 py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition"
                 >
                   Start Free — 5 Credits
@@ -106,7 +106,7 @@ export default function Home() {
             Sign up free and get 5 credits to try AI-powered 3D generation.
           </p>
           <Link
-            href="/register"
+            href="/sign-up"
             className="inline-block px-8 py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition"
           >
             Get Started Free

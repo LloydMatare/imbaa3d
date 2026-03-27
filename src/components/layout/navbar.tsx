@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { auth } from "@/lib/auth";
+import { auth } from "@clerk/nextjs/server";
 import { getCredits } from "@/lib/credits";
-import { UserMenu } from "./user-menu";
+import { UserButton } from "@clerk/nextjs";
 
 export async function Navbar() {
-  const session = await auth();
+  const { userId } = await auth();
 
   return (
     <nav className="border-b border-gray-800 bg-gray-950/80 backdrop-blur-sm sticky top-0 z-50">
@@ -21,7 +21,7 @@ export async function Navbar() {
               >
                 Pricing
               </Link>
-              {session?.user && (
+              {userId && (
                 <Link
                   href="/dashboard"
                   className="text-sm text-gray-400 hover:text-white transition"
@@ -33,22 +33,21 @@ export async function Navbar() {
           </div>
 
           <div className="flex items-center gap-4">
-            {session?.user ? (
-              <UserMenu
-                name={session.user.name || "User"}
-                email={session.user.email || ""}
-                userId={session.user.id}
-              />
+            {userId ? (
+              <div className="flex items-center gap-3">
+                <CreditsBadge userId={userId} />
+                <UserButton />
+              </div>
             ) : (
               <div className="flex items-center gap-3">
                 <Link
-                  href="/login"
+                  href="/sign-in"
                   className="text-sm text-gray-300 hover:text-white transition"
                 >
                   Sign in
                 </Link>
                 <Link
-                  href="/register"
+                  href="/sign-up"
                   className="text-sm px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
                 >
                   Get started
@@ -59,5 +58,14 @@ export async function Navbar() {
         </div>
       </div>
     </nav>
+  );
+}
+
+async function CreditsBadge({ userId }: { userId: string }) {
+  const credits = await getCredits(userId).catch(() => 0);
+  return (
+    <span className="text-sm text-gray-400">
+      <span className="text-white font-medium">{credits}</span> credits
+    </span>
   );
 }
