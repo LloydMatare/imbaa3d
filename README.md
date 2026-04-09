@@ -20,6 +20,40 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Phase 3 Development Notes
+
+### AI Microservice
+
+Run the stub service locally:
+
+```bash
+docker compose up ai
+```
+
+Or directly:
+
+```bash
+cd services/ai-microservice
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+```
+
+Set the environment variable:
+
+```bash
+AI_SERVICE_URL="http://localhost:8001"
+```
+
+### Image Conversion Queue
+
+Image conversions are queued (dev) and processed via the worker:
+
+```bash
+npx tsx scripts/regenerate-model.ts --queue 5
+```
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

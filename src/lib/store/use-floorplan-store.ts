@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type {
-  FloorPlanDocV2,
+  FloorPlanDocV3,
   FloorPlanItem,
   FloorPlanItemType,
   FloorPlanOpening,
@@ -8,11 +8,15 @@ import type {
   FloorPlanTool,
   FloorPlanWall,
 } from "@/lib/floorplan/types";
+import { FLOORPLAN_SCHEMA_ID } from "@/lib/floorplan/types";
 
-type Selection = { kind: "wall" | "item" | "opening" | "room"; id: string } | null;
+type Selection =
+  | { kind: "wall" | "item" | "opening" | "room"; id: string }
+  | { kind: "multi"; ids: { kind: "wall" | "item" | "opening" | "room"; id: string }[] }
+  | null;
 
 type Snapshot = Pick<
-  FloorPlanDocV2,
+  FloorPlanDocV3,
   | "stage"
   | "walls"
   | "openings"
@@ -42,6 +46,19 @@ export interface FloorPlanState {
   // Monotonic revision counter used for "dirty" tracking and autosave.
   editSeq: number;
   markDirty: () => void;
+
+  // Passed through for export/debugging; not currently edited in the UI.
+  docMeta?: FloorPlanDocV3["meta"];
+  setDocMeta: (meta: FloorPlanState["docMeta"]) => void;
+
+  // Used for new furniture placement (click-to-place or drag-drop).
+  placementRotation: number;
+  setPlacementRotation: (deg: number) => void;
+
+  // Default size per furniture type for new placements.
+  placementSizes: Partial<Record<FloorPlanItemType, { w: number; h: number }>>;
+  setPlacementSize: (t: FloorPlanItemType, size: { w: number; h: number }) => void;
+  resetPlacementSize: (t: FloorPlanItemType) => void;
 
   tool: FloorPlanTool;
   setTool: (tool: FloorPlanTool) => void;
@@ -77,8 +94,8 @@ export interface FloorPlanState {
   selected: Selection;
   setSelected: (sel: Selection) => void;
 
-  load: (doc: FloorPlanDocV2) => void;
-  toDoc: () => FloorPlanDocV2;
+  load: (doc: FloorPlanDocV3) => void;
+  toDoc: () => FloorPlanDocV3;
 
   addWall: (wall: FloorPlanWall) => void;
   updateWall: (id: string, patch: Partial<FloorPlanWall>) => void;
@@ -90,6 +107,7 @@ export interface FloorPlanState {
     patch: Partial<FloorPlanOpening>
   ) => void;
   addItem: (item: FloorPlanItem) => void;
+  setItems: (items: FloorPlanItem[]) => void;
   updateItem: (id: string, patch: Partial<FloorPlanItem>) => void;
   updateItemWithHistory: (id: string, patch: Partial<FloorPlanItem>) => void;
   addRoom: (room: FloorPlanRoom) => void;
@@ -107,6 +125,27 @@ export interface FloorPlanState {
 export const useFloorPlanStore = create<FloorPlanState>((set, get) => ({
   editSeq: 0,
   markDirty: () => set((s) => ({ editSeq: s.editSeq + 1 })),
+
+  docMeta: undefined,
+  setDocMeta: (docMeta) => set({ docMeta }),
+
+  placementRotation: 0,
+  setPlacementRotation: (placementRotation) => set({ placementRotation }),
+
+  placementSizes: {},
+  setPlacementSize: (t, size) =>
+    set((s) => ({
+      placementSizes: {
+        ...s.placementSizes,
+        [t]: { w: size.w, h: size.h },
+      },
+    })),
+  resetPlacementSize: (t) =>
+    set((s) => {
+      const next = { ...s.placementSizes };
+      delete next[t];
+      return { placementSizes: next };
+    }),
 
   tool: "select",
   setTool: (tool) =>
@@ -156,6 +195,7 @@ export const useFloorPlanStore = create<FloorPlanState>((set, get) => ({
   load: (doc) =>
     set({
       editSeq: 0,
+      docMeta: doc.meta,
       tool: "select",
       furnitureType: "generic",
       gridSize: doc.gridSize,
@@ -175,7 +215,8 @@ export const useFloorPlanStore = create<FloorPlanState>((set, get) => ({
   toDoc: () => {
     const s = get();
     return {
-      version: 2,
+      schema: FLOORPLAN_SCHEMA_ID,
+      version: 3,
       gridSize: s.gridSize,
       pxPerMeter: s.pxPerMeter,
       units: s.units,
@@ -185,6 +226,7 @@ export const useFloorPlanStore = create<FloorPlanState>((set, get) => ({
       openings: s.openings,
       items: s.items,
       rooms: s.rooms,
+      ...(s.docMeta ? { meta: s.docMeta } : {}),
     };
   },
 
@@ -257,6 +299,10 @@ export const useFloorPlanStore = create<FloorPlanState>((set, get) => ({
     set((s) => ({ items: [...s.items, item], selected: { kind: "item", id: item.id } }));
   },
 
+  setItems: (items) => {
+    set({ items });
+  },
+
   updateItem: (id, patch) => {
     set((s) => ({
       items: s.items.map((it) => (it.id === id ? { ...it, ...patch } : it)),
@@ -288,7 +334,19 @@ export const useFloorPlanStore = create<FloorPlanState>((set, get) => ({
     const sel = get().selected;
     if (!sel) return;
     get().pushHistory();
-    if (sel.kind === "item") {
+    if (sel.kind === "multi") {
+      const wallIds = new Set(sel.ids.filter((s) => s.kind === "wall").map((s) => s.id));
+      const openingIds = new Set(sel.ids.filter((s) => s.kind === "opening").map((s) => s.id));
+      const itemIds = new Set(sel.ids.filter((s) => s.kind === "item").map((s) => s.id));
+      const roomIds = new Set(sel.ids.filter((s) => s.kind === "room").map((s) => s.id));
+      set((s) => ({
+        walls: s.walls.filter((x) => !wallIds.has(x.id)),
+        openings: s.openings.filter((x) => !openingIds.has(x.id)),
+        items: s.items.filter((x) => !itemIds.has(x.id)),
+        rooms: s.rooms.filter((x) => !roomIds.has(x.id)),
+        selected: null,
+      }));
+    } else if (sel.kind === "item") {
       set((s) => ({ items: s.items.filter((x) => x.id !== sel.id), selected: null }));
     } else if (sel.kind === "opening") {
       set((s) => ({

@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, jsonb, boolean, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const users = pgTable("User", {
   id: text("id").primaryKey(),
@@ -22,6 +22,9 @@ export const projects = pgTable("Project", {
   thumbnailUrl: text("thumbnailUrl"),
   modelUrl: text("modelUrl"),
   isPublic: boolean("isPublic").notNull().default(false),
+  // Unlisted access token for sharing private projects via /view/:id?token=...
+  // Postgres UNIQUE allows multiple NULLs, so only set when sharing is enabled.
+  shareToken: text("shareToken").unique(),
   userId: text("userId").notNull().references(() => users.id, { onDelete: 'cascade' }),
   createdAt: timestamp("createdAt", { precision: 3, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp("updatedAt", { precision: 3, mode: 'date' }).notNull().defaultNow().$onUpdate(() => new Date()),
@@ -46,4 +49,82 @@ export const payments = pgTable("Payment", {
   creditsAdded: integer("creditsAdded").notNull(),
   status: text("status").notNull().default("PENDING"),
   createdAt: timestamp("createdAt", { precision: 3, mode: 'date' }).notNull().defaultNow(),
+});
+
+export const projectVersions = pgTable("ProjectVersion", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  projectId: text("projectId").notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  floorPlanData: jsonb("floorPlanData").notNull(),
+  label: text("label"),
+  createdAt: timestamp("createdAt", { precision: 3, mode: 'date' }).notNull().defaultNow(),
+});
+
+export const projectMembers = pgTable(
+  "ProjectMember",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    userId: text("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    role: text("role").notNull().default("viewer"),
+    createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => ({
+    projectUserUnique: uniqueIndex("ProjectMember_project_user").on(
+      table.projectId,
+      table.userId
+    ),
+  })
+);
+
+export const projectInvites = pgTable(
+  "ProjectInvite",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    role: text("role").notNull().default("viewer"),
+    token: text("token").notNull().unique(),
+    invitedBy: text("invitedBy").notNull().references(() => users.id, { onDelete: "cascade" }),
+    status: text("status").notNull().default("pending"),
+    createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => ({
+    projectEmailUnique: uniqueIndex("ProjectInvite_project_email").on(
+      table.projectId,
+      table.email
+    ),
+  })
+);
+
+// Phase 3: conversion job tracking (enables queued/processing/complete/failed UX and future async workers).
+export const conversionJobs = pgTable("ConversionJob", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  projectId: text("projectId")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  userId: text("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  // QUEUED | PROCESSING | COMPLETE | FAILED
+  status: text("status").notNull().default("QUEUED"),
+  // floorplan | image (future)
+  mode: text("mode").notNull().default("floorplan"),
+  settings: jsonb("settings"),
+  modelUrl: text("modelUrl"),
+  error: text("error"),
+  startedAt: timestamp("startedAt", { precision: 3, mode: "date" }),
+  finishedAt: timestamp("finishedAt", { precision: 3, mode: "date" }),
+  createdAt: timestamp("createdAt", { precision: 3, mode: "date" })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
 });

@@ -8,10 +8,9 @@ import { useCreditsStore } from "@/lib/store/use-credits-store";
 interface UserMenuProps {
   name: string;
   email: string;
-  userId: string;
 }
 
-export function UserMenu({ name, email, userId }: UserMenuProps) {
+export function UserMenu({ name, email }: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const { credits, setCredits } = useCreditsStore();
 

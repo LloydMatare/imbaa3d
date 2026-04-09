@@ -13,6 +13,8 @@ export async function registerUser(
   _prevState: { error: string } | null | undefined,
   _formData: FormData
 ) {
+  void _prevState;
+  void _formData;
   // Handled by Clerk's <SignUp> component
   redirect("/sign-up");
 }
@@ -21,11 +23,14 @@ export async function loginUser(
   _prevState: { error: string } | null | undefined,
   _formData: FormData
 ) {
+  void _prevState;
+  void _formData;
   // Handled by Clerk's <SignIn> component
   redirect("/sign-in");
 }
 
 export async function loginWithProvider(_provider: "google" | "github") {
+  void _provider;
   // Handled by Clerk's <SignIn> component with OAuth strategy
   redirect("/sign-in");
 }

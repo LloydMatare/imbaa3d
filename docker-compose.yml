@@ -12,6 +12,12 @@ services:
       - "5433:5432"
     volumes:
       - imbaa3d_pgdata:/var/lib/postgresql/data
+  ai:
+    build:
+      context: ./services/ai-microservice
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
 
 volumes:
   imbaa3d_pgdata:

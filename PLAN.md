@@ -132,10 +132,10 @@ npm run db:push
 * Feature overview, pricing cards, CTA
 * SEO meta, Open Graph tags
 
-## Phase 2: 2D Floor Plan Editor (Weeks 7–12)
+## Phase 2: 2D Floor Plan Editor (Weeks 7–12) — COMPLETE
 
 ### Phase 2 Status (Repo Reality)
-In progress:
+Completed:
 * Basic Konva-based 2D editor lives inside `/editor/[projectId]` and persists to `Project.floorPlanData`
 * True multi-layer editor implemented (grid, walls, openings, furniture, annotations, UI overlay)
 * Tools implemented: select, pan, zoom, wall draw (endpoint snap + Shift constrain), door/window placement (snap-to-wall)
@@ -168,11 +168,30 @@ In progress:
 * Basic on-canvas visual overlays for furniture/openings (type-specific colors + abbreviations + centered SVG icons, including door/window icons)
 * View navigation improved: hold Space to pan, plus "Reset view" (Ctrl/Cmd+0), plus Undo/Redo buttons in the editor toolbar
 * Wall edit hardening: attached doors/windows clamp within wall segment and auto-shrink if wall becomes too short
+* **Asset library expansion**: 5 new furniture types (lamp, tv, mirror, dishwasher, washer) with SVG icons, categorized in sidebar
+* **Dimension label enhancements**: tick marks at wall endpoints, dimension lines, scale-aware label threshold (shows for shorter walls when zoomed in), selected wall highlighting, live dimension preview while dragging wall endpoints
+* **Layer visibility toggles**: toolbar dropdown with checkboxes for Rooms, Walls, Openings, Furniture, Dimensions (shows count of hidden layers)
+* **Wall angle display**: angle in degrees shown in properties panel alongside length, quick angle snap buttons (0, 15, 30, 45, 60, 75, 90, 120, 135, 150 degrees)
+* **Multi-select**: click-drag selection rectangle in select mode, multi-select type in store, multi-delete, multi-nudge, multi-alignment, multi-copy/paste/duplicate
+* **Alignment tools**: 6-button alignment grid (Left, Center H, Right, Top, Center V, Bottom) in properties panel when multi-select is active
+* **Serialization hardening**: `validateFloorPlanDocIntegrity()` (dangling refs, duplicate IDs, too-few-points rooms), `floorPlanDocStats()` (counts + JSON size), `safeUpgradeFloorPlanDoc()` (try-catch with fallback to empty doc)
+* **Keyboard shortcut cheatsheet**: press `?` to toggle overlay, `Esc` to close, categorized (Tools, Editing, Clipboard, History, General)
+* **Coordinate readout**: live cursor position in toolbar as pixel coords + real-world units (m/ft)
+* **Grid size presets**: quick buttons (10, 25, 50) below grid size input in properties panel
+* **Live wall distance indicator**: dashed amber line from furniture placement preview to nearest wall with distance label
+* **Auto-room detection**: "Detect Rooms" button runs left-face traversal graph algorithm on walls to find closed loops, creates rooms for new interior faces with toast feedback
+* **Wall merge**: "Merge Collinear Walls" button when exactly 2 walls are multi-selected, checks collinearity, extends one wall to cover both, re-attaches openings
+* **Snap indicators**: visual feedback during wall/room drawing — blue crosshair at wall endpoint snaps, yellow circle at grid snaps
+* **Zoom to fit**: "Fit" button computes bounding box of all elements and adjusts stage scale/offset to fit viewport
+* **Door swing arc**: quarter-circle arc from hinge point with door leaf line, visible at zoom >= 0.25
+* **Window glass lines**: parallel dashed lines inside window rect (glass panes) + center divider, visible at zoom >= 0.35
+* **Room area summary**: total area of all rooms shown in properties panel when 2+ rooms exist
+* **Inline room rename**: double-click room polygon on canvas to rename via floating input (Enter saves, Escape cancels)
+* **Publishing controls**: public/private toggle + view link copy in editor toolbar
+* **3D viewer route**: `/view/[projectId]` with camera presets (perspective, top, front, side), grid toggle, and loading overlay
+* **Serialization versioning/migration tooling**: `validateFloorPlanDocIntegrity()`, `safeUpgradeFloorPlanDoc()`, `floorPlanDocStats()`, `sanitizeFloorPlanDocForStorage()` with API-level sanitization
 
-Pending for Phase 2 completion:
-* Richer asset library (more SVG/PNG icons + drag previews + drag-to-rotate), plus on-canvas icon rendering if desired
-* Robust serialization schema + migrations/versioning for floor plan docs (beyond doc v2 upgrades)
-* Dimension system hardening (units, snapping, nicer label placement) and more editing affordances
+Phase 2 complete. Ready for Phase 3.
 
 ### 2.1 Canvas Editor (Konva.js + react-konva)
 * Multi-layer architecture: grid layer, walls layer, furniture layer, annotation layer, UI overlay layer
@@ -199,6 +218,36 @@ Pending for Phase 2 completion:
 
 ## Phase 3: AI-Powered 2D→3D Conversion (Weeks 13–20)
 
+### Phase 3 Status (Repo Reality)
+Completed:
+* `POST /api/convert/[projectId]` — API route accepts project ID, validates floor plan, deducts 3 credits, returns floor plan data for client-side conversion
+* `POST /api/models/[projectId]` — API route to store generated GLB models (with storage abstraction for S3)
+* `GET /api/models/[projectId]` — API route to serve stored models with access control
+* `DELETE /api/models/[projectId]` — API route to delete models
+* `POST /api/upload/[projectId]` — API route to upload reference floor plan images
+* `GET /api/upload/[projectId]` — API route to serve uploaded reference images
+* Storage abstraction (`src/lib/storage.ts`) — supports memory (dev) and S3 (production) backends
+* 3D generation pipeline (`src/lib/floorplan/convert-to-3d.ts`): converts FloorPlanDocV3 → Three.js geometry (walls, floors, ceilings, doors, windows, furniture) → GLB export
+* Configurable generation settings (wall height, wall color, floor color, ceiling toggle)
+* Enhanced 3D viewer with camera presets (Perspective, Top, Front, Side) with smooth animated transitions, grid toggle, material switching (wall/floor colors), first-person walkthrough mode (PointerLockControls + WASD movement)
+* Measurement tool — click two points to measure distance in meters
+* Post-processing — SSAO and SMAA anti-aliasing with toggle
+* Dimension labels — wall lengths and room areas displayed on 3D model with toggle
+* ConversionPanel component for client-side conversion UI with progress tracking
+* UploadPanel integrated into editor properties panel with actual image upload to server
+* Uploaded reference images displayed on editor canvas as tracing guides
+* Generate 3D button in editor toolbar and view page
+* SafeModelViewer with URL verification before rendering
+* Server-side conversion now generates GLB and stores via `/api/convert/[projectId]`
+* Conversion job tracking (`ConversionJob`) with queued/processing/complete/failed statuses
+* Dev queue worker (`POST /api/jobs/conversion/run`) + CLI queue runner (`scripts/regenerate-model.ts --queue`)
+* Image-mode conversion queue + AI microservice proxy (`/api/ai/convert/[projectId]`) with stubbed FastAPI service
+
+Infrastructure remaining (requires external services):
+* Python FastAPI microservice for AI-powered wall detection from images
+* Full S3 integration (requires AWS credentials)
+* Production-ready job queue (Redis/SQS) + background worker deployment
+
 ### 3.1 AI Microservice (Python FastAPI)
 * Endpoint: `POST /api/convert` — accepts 2D floor plan JSON or image
 * Wall detection from uploaded images (OpenCV + custom model)
@@ -210,7 +259,8 @@ Pending for Phase 2 completion:
 ### 3.2 3D Generation Pipeline
 * Server-side: convert AI output JSON → Three.js-compatible geometry
 * Generate wall meshes, floor planes, ceiling, door/window cutouts
-* Apply default PBR materials (walls=white, floor=wood, etc.)
+* Apply default PBR materials (walls=white, floor=wood, ceiling=white)
+* Configurable generation settings (wall height, wall color, floor color, ceiling toggle)
 * Export as `.glb` file, store in S3
 * Credit deduction: 3 credits per conversion (checked before processing)
 
@@ -229,6 +279,20 @@ Pending for Phase 2 completion:
 * Webhook or polling for completion notification
 
 ## Phase 4: Professional Features & Collaboration (Weeks 21–30)
+
+### Phase 4 Status (Repo Reality)
+In progress:
+* `.glb` download button on view page
+* Embeddable iframe viewer route (`/embed/[projectId]`) with customizable controls
+* Copy embed code button on view page
+* OG meta tags for social sharing (title, description, thumbnail)
+* Floor plan PNG export from 2D editor toolbar
+* Floor plan JSON export/import (already existed)
+* Furniture items rendered as 3D boxes in generated scenes (type-specific colors and heights)
+* Project version history — save snapshots, list, and restore via `/api/projects/[id]/versions`
+* Share link button with token generation for private projects
+* Embed customizer (controls/grid/colors/textures/background/branding)
+* 3D viewer thumbnail capture + thumbnail API route
 
 ### 4.1 Virtual Staging & Furniture
 * 3D furniture library (`.glb` models)

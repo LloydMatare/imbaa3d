@@ -47,6 +47,7 @@ export type CreditReason =
   | "purchase"
   | "signup_bonus"
   | "ai_conversion"
+  | "ai_conversion_refund"
   | "hd_render"
   | "ai_furniture";
 

@@ -1,0 +1,27 @@
+import { FloorPlanItemType } from './floorplan/types';
+
+export const furnitureModels: Record<FloorPlanItemType, string> = {
+  sofa: 'https://models.imbaa3d.com/sofa.glb',
+  bed: 'https://models.imbaa3d.com/bed.glb',
+  table: 'https://models.imbaa3d.com/table.glb',
+  chair: 'https://models.imbaa3d.com/chair.glb',
+  desk: 'https://models.imbaa3d.com/desk.glb',
+  toilet: 'https://models.imbaa3d.com/toilet.glb',
+  sink: 'https://models.imbaa3d.com/sink.glb',
+  bathtub: 'https://models.imbaa3d.com/bathtub.glb',
+  stove: 'https://models.imbaa3d.com/stove.glb',
+  fridge: 'https://models.imbaa3d.com/fridge.glb',
+  wardrobe: 'https://models.imbaa3d.com/wardrobe.glb',
+  bookshelf: 'https://models.imbaa3d.com/bookshelf.glb',
+  lamp: 'https://models.imbaa3d.com/lamp.glb',
+  tv: 'https://models.imbaa3d.com/tv.glb',
+  mirror: 'https://models.imbaa3d.com/mirror.glb',
+  dishwasher: 'https://models.imbaa3d.com/dishwasher.glb',
+  washer: 'https://models.imbaa3d.com/washer.glb',
+  car: 'https://models.imbaa3d.com/car.glb',
+  flowerpot: 'https://models.imbaa3d.com/flowerpot.glb',
+  generic: 'https://models.imbaa3d.com/generic.glb',
+  cabinet: 'https://models.imbaa3d.com/cabinet.glb',
+  shelf: 'https://models.imbaa3d.com/shelf.glb',
+  plant: 'https://models.imbaa3d.com/plant.glb',
+};

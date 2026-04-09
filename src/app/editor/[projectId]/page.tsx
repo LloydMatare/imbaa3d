@@ -2,8 +2,9 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { projects } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { EditorShell } from "./editor-shell";
+import { getProjectAccess } from "@/lib/auth/project-access";
 
 export default async function EditorPage({
   params,
@@ -14,13 +15,24 @@ export default async function EditorPage({
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
+  const access = await getProjectAccess({ projectId, userId });
+  if (!access || !access.canEdit) notFound();
+
   const [project] = await db
-    .select()
+    .select({
+      id: projects.id,
+      title: projects.title,
+      type: projects.type,
+      status: projects.status,
+      modelUrl: projects.modelUrl,
+      floorPlanData: projects.floorPlanData,
+      isPublic: projects.isPublic,
+    })
     .from(projects)
-    .where(and(eq(projects.id, projectId), eq(projects.userId, userId)))
+    .where(eq(projects.id, projectId))
     .limit(1);
 
   if (!project) notFound();
 
-  return <EditorShell project={project} />;
+  return <EditorShell project={project} isOwner={access.isOwner} />;
 }

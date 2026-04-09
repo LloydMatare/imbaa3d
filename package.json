@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
@@ -27,6 +27,7 @@
     "drizzle-orm": "^0.45.1",
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.4.2",
+    "jspdf": "^3.0.1",
     "konva": "^10.2.3",
     "lucide-react": "^1.7.0",
     "next": "16.2.1",

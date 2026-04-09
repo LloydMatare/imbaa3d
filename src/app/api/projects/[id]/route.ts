@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { projects } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { ensureDbUser } from "@/lib/auth/ensure-db-user";
+import { sanitizeFloorPlanDocForStorage } from "@/lib/floorplan/types";
+import { getProjectAccess } from "@/lib/auth/project-access";
+
+const MAX_FLOORPLAN_JSON_BYTES = 900_000; // keep well under common request/proxy limits
 
 export async function GET(
   _req: NextRequest,
@@ -18,10 +22,29 @@ export async function GET(
   try {
     await ensureDbUser();
 
+    const access = await getProjectAccess({ projectId: id, userId });
+    if (!access || !access.canView) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
     const [project] = await db
-      .select()
+      .select({
+        id: projects.id,
+        title: projects.title,
+        description: projects.description,
+        type: projects.type,
+        status: projects.status,
+        floorPlanData: projects.floorPlanData,
+        sceneConfig: projects.sceneConfig,
+        thumbnailUrl: projects.thumbnailUrl,
+        modelUrl: projects.modelUrl,
+        isPublic: projects.isPublic,
+        userId: projects.userId,
+        createdAt: projects.createdAt,
+        updatedAt: projects.updatedAt,
+      })
       .from(projects)
-      .where(and(eq(projects.id, id), eq(projects.userId, userId)))
+      .where(eq(projects.id, id))
       .limit(1);
 
     if (!project) {
@@ -67,11 +90,43 @@ export async function PATCH(
       if (allowed[k]) patch[k] = v;
     }
 
+    if ("floorPlanData" in patch) {
+      // Normalize/migrate/sanitize untrusted client payload before storing it.
+      const sanitized = sanitizeFloorPlanDocForStorage(patch.floorPlanData);
+      const json = JSON.stringify(sanitized);
+      if (json.length > MAX_FLOORPLAN_JSON_BYTES) {
+        return NextResponse.json(
+          { error: "Floor plan is too large" },
+          { status: 413 }
+        );
+      }
+      patch.floorPlanData = sanitized;
+    }
+
+    const access = await getProjectAccess({ projectId: id, userId });
+    if (!access || !access.canEdit) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const [updated] = await db
       .update(projects)
       .set(patch)
-      .where(and(eq(projects.id, id), eq(projects.userId, userId)))
-      .returning();
+      .where(eq(projects.id, id))
+      .returning({
+        id: projects.id,
+        title: projects.title,
+        description: projects.description,
+        type: projects.type,
+        status: projects.status,
+        floorPlanData: projects.floorPlanData,
+        sceneConfig: projects.sceneConfig,
+        thumbnailUrl: projects.thumbnailUrl,
+        modelUrl: projects.modelUrl,
+        isPublic: projects.isPublic,
+        userId: projects.userId,
+        createdAt: projects.createdAt,
+        updatedAt: projects.updatedAt,
+      });
 
     if (!updated) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -97,9 +152,14 @@ export async function DELETE(
   try {
     await ensureDbUser();
 
+    const access = await getProjectAccess({ projectId: id, userId });
+    if (!access || !access.isOwner) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const result = await db
       .delete(projects)
-      .where(and(eq(projects.id, id), eq(projects.userId, userId)))
+      .where(eq(projects.id, id))
       .returning({ id: projects.id });
 
     if (result.length === 0) {

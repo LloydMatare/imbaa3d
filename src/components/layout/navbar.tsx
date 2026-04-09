@@ -29,6 +29,14 @@ export async function Navbar() {
                   Dashboard
                 </Link>
               )}
+              <Link
+                href="https://github.com/your-repo/imbaa3d/issues"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-gray-400 hover:text-white transition"
+              >
+                Feedback
+              </Link>
             </div>
           </div>
 
