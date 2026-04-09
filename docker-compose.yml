@@ -1,0 +1,17 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: imbaa3d
+      POSTGRES_USER: imbaa3d
+      POSTGRES_PASSWORD: imbaa3d
+    ports:
+      # System Postgres is commonly already bound to 5432 on Fedora.
+      # Use 5433 for the dev container to avoid conflicts.
+      - "5433:5432"
+    volumes:
+      - imbaa3d_pgdata:/var/lib/postgresql/data
+
+volumes:
+  imbaa3d_pgdata:
